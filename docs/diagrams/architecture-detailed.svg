@@ -1,0 +1,291 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 1596" role="img" aria-labelledby="mcd-title mcd-desc">
+<title id="mcd-title">Multi-cloud secure document platform: Azure identity and API tiers federating into an encrypted AWS document store</title>
+<desc id="mcd-desc">A Terraform control plane deploys into an Azure subscription and an AWS account from a single configuration. On the Azure side, Entra ID issues tokens, a user-assigned managed identity holds Key Vault access, and two API Management tiers sit in a virtual network: an external tier that validates JWTs and an internal VNet-injected tier that proxies Key Vault using its own managed identity. On the AWS side, an OIDC provider trusts the Entra issuer and an IAM role accepts AssumeRoleWithWebIdentity when the audience and subject claims match, granting read access scoped to one S3 prefix and decrypt on one customer-managed KMS key. Four negative tests confirm that a wrong identity, an expired token, an out-of-scope prefix and a missing KMS grant are all denied.</desc>
+
+<defs>
+<style>
+.mcd-bg{fill:#FBFBF9}
+.mcd-h1{font-family:'IBM Plex Sans',sans-serif;font-size:22px;font-weight:600;fill:#16181D}
+.mcd-sub{font-family:'IBM Plex Sans',sans-serif;font-size:13px;fill:#5C626E}
+.mcd-t{font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;fill:#16181D}
+.mcd-s{font-family:'IBM Plex Sans',sans-serif;font-size:12px;fill:#5C626E}
+.mcd-m{font-family:'IBM Plex Mono',monospace;font-size:12px;fill:#17505C}
+.mcd-mk{font-family:'IBM Plex Mono',monospace;font-size:12px;fill:#16181D}
+.mcd-lbl{font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;fill:#5C626E}
+.mcd-hd{font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;fill:#16181D}
+.mcd-al{font-family:'IBM Plex Sans',sans-serif;font-size:12px;fill:#17505C}
+.mcd-card{fill:#FFFFFF;stroke:#DFE0DC;stroke-width:1}
+.mcd-band{fill:#EDF2F2;stroke:#DFE0DC;stroke-width:1}
+.mcd-acct{fill:none;stroke:#DFE0DC;stroke-width:1}
+.mcd-grp{fill:#F4F7F6;stroke:#C5D6D9;stroke-width:1}
+.mcd-out{fill:none;stroke:#B9BCB5;stroke-width:1;stroke-dasharray:5 4}
+.mcd-rule{stroke:#DFE0DC;stroke-width:1}
+.mcd-arr{fill:none;stroke:#5C626E;stroke-width:1.5}
+.mcd-arrd{fill:none;stroke:#5C626E;stroke-width:1.5;stroke-dasharray:5 4}
+.mcd-tok{fill:none;stroke:#17505C;stroke-width:1.5}
+.mcd-num{fill:#17505C}
+.mcd-numt{font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;fill:#FFFFFF}
+.mcd-ico{fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.mcd-ti-id{fill:#E9EAF3}
+.mcd-ic-id{stroke:#4A5578}
+.mcd-ti-da{fill:#E6EEF3}
+.mcd-ic-da{stroke:#2E5E7E}
+.mcd-ti-se{fill:#E8F0E6}
+.mcd-ic-se{stroke:#4A6B45}
+.mcd-ti-ed{fill:#E3EEEF}
+.mcd-ic-ed{stroke:#17505C}
+.mcd-ti-ou{fill:#EFF0EC}
+.mcd-ic-ou{stroke:#5C626E}
+</style>
+
+<marker id="mcd-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M1 1 L9 5 L1 9" fill="none" stroke="#5C626E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+<marker id="mcd-aht" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M1 1 L9 5 L1 9" fill="none" stroke="#17505C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+
+<symbol id="mcd-sym-id" viewBox="0 0 18 18"><circle class="mcd-ico" cx="9" cy="6" r="3.2"/><path class="mcd-ico" d="M3 15.2c0-3.3 2.7-5.2 6-5.2s6 1.9 6 5.2"/></symbol>
+<symbol id="mcd-sym-key" viewBox="0 0 18 18"><circle class="mcd-ico" cx="5.8" cy="9" r="3"/><path class="mcd-ico" d="M8.8 9H16M13.4 9v3M16 9v3.4"/></symbol>
+<symbol id="mcd-sym-net" viewBox="0 0 18 18"><circle class="mcd-ico" cx="9" cy="3.6" r="1.9"/><circle class="mcd-ico" cx="3.6" cy="14" r="1.9"/><circle class="mcd-ico" cx="14.4" cy="14" r="1.9"/><path class="mcd-ico" d="M8.1 5.3 4.5 12.3M9.9 5.3l3.6 7M5.5 14h7"/></symbol>
+<symbol id="mcd-sym-shield" viewBox="0 0 18 18"><path class="mcd-ico" d="M9 2.2 15 4.6V9c0 4-3 6.3-6 7.1-3-0.8-6-3.1-6-7.1V4.6Z"/></symbol>
+<symbol id="mcd-sym-api" viewBox="0 0 18 18"><path class="mcd-ico" d="M6.6 4.4 2.6 9l4 4.6M11.4 4.4 15.4 9l-4 4.6"/></symbol>
+<symbol id="mcd-sym-bucket" viewBox="0 0 18 18"><ellipse class="mcd-ico" cx="9" cy="4.6" rx="6" ry="2.3"/><path class="mcd-ico" d="M3 4.6v8.8c0 1.3 2.7 2.3 6 2.3s6-1 6-2.3V4.6"/></symbol>
+<symbol id="mcd-sym-lock" viewBox="0 0 18 18"><rect class="mcd-ico" x="3.6" y="7.6" width="10.8" height="7.4" rx="1.6"/><path class="mcd-ico" d="M6.2 7.6V5.6a2.8 2.8 0 0 1 5.6 0v2"/></symbol>
+<symbol id="mcd-sym-term" viewBox="0 0 18 18"><rect class="mcd-ico" x="2" y="4" width="14" height="10" rx="1.4"/><path class="mcd-ico" d="M5.4 7.6 7.9 9.6l-2.5 2M10.2 11.6H13"/></symbol>
+<symbol id="mcd-sym-check" viewBox="0 0 18 18"><path class="mcd-ico" d="M3 9.4 7 13.4 15 4.8"/></symbol>
+</defs>
+
+<rect class="mcd-bg" x="0" y="0" width="960" height="1596"/>
+
+<text class="mcd-h1" x="24" y="40">Multi-cloud secure document platform</text>
+<text class="mcd-sub" x="24" y="62">Azure identity and API tiers federating into an encrypted AWS document store - no stored access keys on either side</text>
+
+<rect class="mcd-out" x="20" y="84" width="920" height="108" rx="14"/>
+<rect class="mcd-card" x="36" y="98" width="430" height="78" rx="10"/>
+<rect class="mcd-ti-ou" x="48" y="110" width="30" height="30" rx="7"/>
+<use class="mcd-ic-ou" href="#mcd-sym-term" x="54" y="116" width="18" height="18"/>
+<text class="mcd-t" x="88" y="127">Terraform control plane</text>
+<text class="mcd-s" x="88" y="145">One configuration, two providers, one state file</text>
+<text class="mcd-m" x="48" y="166">azurerm 4.x · aws 5.x · azuread 3.x</text>
+<text class="mcd-s" x="490" y="124">Remote state in an Azure Storage blob, leased on write so two</text>
+<text class="mcd-s" x="490" y="142">applies cannot collide. Azure resource groups split by lifecycle</text>
+<text class="mcd-s" x="490" y="160">so disposable workloads tear down without touching identity.</text>
+<text class="mcd-lbl" x="36" y="186">Operator workstation - outside both clouds</text>
+
+<path class="mcd-arr" d="M235 192 V206" marker-end="url(#mcd-ah)"/>
+<path class="mcd-arr" d="M725 192 V206" marker-end="url(#mcd-ah)"/>
+
+<rect class="mcd-acct" x="20" y="206" width="430" height="880" rx="14"/>
+<text class="mcd-lbl" x="36" y="1072">Azure subscription - australiaeast</text>
+
+<rect class="mcd-grp" x="36" y="222" width="190" height="134" rx="12"/>
+<rect class="mcd-card" x="48" y="236" width="166" height="92" rx="10"/>
+<rect class="mcd-ti-id" x="60" y="248" width="30" height="30" rx="7"/>
+<use class="mcd-ic-id" href="#mcd-sym-id" x="66" y="254" width="18" height="18"/>
+<text class="mcd-t" x="100" y="267">Entra ID</text>
+<text class="mcd-s" x="60" y="296">App roles, signed JWTs</text>
+<text class="mcd-m" x="60" y="316">mcdp-documents-api</text>
+<text class="mcd-lbl" x="48" y="346">Tenant</text>
+
+<rect class="mcd-grp" x="244" y="222" width="190" height="134" rx="12"/>
+<rect class="mcd-card" x="256" y="236" width="166" height="92" rx="10"/>
+<rect class="mcd-ti-da" x="268" y="248" width="30" height="30" rx="7"/>
+<use class="mcd-ic-da" href="#mcd-sym-bucket" x="274" y="254" width="18" height="18"/>
+<text class="mcd-t" x="308" y="267">State backend</text>
+<text class="mcd-s" x="268" y="296">Versioned, lease locked</text>
+<text class="mcd-m" x="268" y="316">container: tfstate</text>
+<text class="mcd-lbl" x="256" y="346">rg-mcdp-tfstate-aue</text>
+
+<rect class="mcd-grp" x="36" y="368" width="398" height="212" rx="12"/>
+<rect class="mcd-card" x="48" y="382" width="374" height="78" rx="10"/>
+<rect class="mcd-ti-se" x="60" y="394" width="30" height="30" rx="7"/>
+<use class="mcd-ic-se" href="#mcd-sym-key" x="66" y="400" width="18" height="18"/>
+<text class="mcd-t" x="100" y="411">Key Vault</text>
+<text class="mcd-s" x="100" y="429">RBAC authorisation, not legacy access policies</text>
+<text class="mcd-m" x="60" y="450">kv-mcdp-dev-nh01</text>
+<rect class="mcd-card" x="48" y="472" width="374" height="78" rx="10"/>
+<rect class="mcd-ti-id" x="60" y="484" width="30" height="30" rx="7"/>
+<use class="mcd-ic-id" href="#mcd-sym-id" x="66" y="490" width="18" height="18"/>
+<text class="mcd-t" x="100" y="501">User-assigned managed identity</text>
+<text class="mcd-s" x="100" y="519">Key Vault Secrets User · subject of the AWS trust</text>
+<text class="mcd-m" x="60" y="540">id-mcdp-reader</text>
+<text class="mcd-lbl" x="48" y="570">rg-mcdp-identity-aue</text>
+
+<rect class="mcd-grp" x="36" y="592" width="398" height="212" rx="12"/>
+<rect class="mcd-card" x="48" y="606" width="374" height="78" rx="10"/>
+<rect class="mcd-ti-ed" x="60" y="618" width="30" height="30" rx="7"/>
+<use class="mcd-ic-ed" href="#mcd-sym-net" x="66" y="624" width="18" height="18"/>
+<text class="mcd-t" x="100" y="635">Virtual network</text>
+<text class="mcd-s" x="100" y="653">10.1.0.0/16 · workload and APIM subnets</text>
+<text class="mcd-m" x="60" y="674">vnet-mcdp-dev-aue · snet-apim-internal</text>
+<rect class="mcd-card" x="48" y="696" width="374" height="78" rx="10"/>
+<rect class="mcd-ti-se" x="60" y="708" width="30" height="30" rx="7"/>
+<use class="mcd-ic-se" href="#mcd-sym-shield" x="66" y="714" width="18" height="18"/>
+<text class="mcd-t" x="100" y="725">Network security group</text>
+<text class="mcd-s" x="100" y="743">Inbound 3443 control plane, 6390 load balancer</text>
+<text class="mcd-m" x="60" y="764">nsg-apim-internal-aue</text>
+<text class="mcd-lbl" x="48" y="794">rg-mcdp-platform-aue</text>
+
+<rect class="mcd-grp" x="36" y="816" width="398" height="212" rx="12"/>
+<rect class="mcd-card" x="48" y="830" width="374" height="78" rx="10"/>
+<rect class="mcd-ti-ed" x="60" y="842" width="30" height="30" rx="7"/>
+<use class="mcd-ic-ed" href="#mcd-sym-api" x="66" y="848" width="18" height="18"/>
+<text class="mcd-t" x="100" y="859">API Management - external tier</text>
+<text class="mcd-s" x="100" y="877">validate-jwt: issuer, audience, Api.Access role</text>
+<text class="mcd-m" x="60" y="898">apim-mcdp-ext-dev-aue · mock backend</text>
+<rect class="mcd-card" x="48" y="920" width="374" height="78" rx="10"/>
+<rect class="mcd-ti-ed" x="60" y="932" width="30" height="30" rx="7"/>
+<use class="mcd-ic-ed" href="#mcd-sym-api" x="66" y="938" width="18" height="18"/>
+<text class="mcd-t" x="100" y="949">API Management - internal tier</text>
+<text class="mcd-s" x="100" y="967">VNet-injected · managed identity to Key Vault</text>
+<text class="mcd-m" x="60" y="988">apim-mcdp-int-dev-aue</text>
+<text class="mcd-lbl" x="48" y="1018">rg-mcdp-workload-aue</text>
+
+<rect class="mcd-acct" x="510" y="206" width="430" height="880" rx="14"/>
+<text class="mcd-lbl" x="526" y="1072">AWS account - ap-southeast-2</text>
+
+<rect class="mcd-grp" x="526" y="222" width="398" height="212" rx="12"/>
+<rect class="mcd-card" x="538" y="236" width="374" height="78" rx="10"/>
+<rect class="mcd-ti-id" x="550" y="248" width="30" height="30" rx="7"/>
+<use class="mcd-ic-id" href="#mcd-sym-id" x="556" y="254" width="18" height="18"/>
+<text class="mcd-t" x="590" y="265">OIDC identity provider</text>
+<text class="mcd-s" x="590" y="283">Trusts the Entra v1.0 issuer for this tenant</text>
+<text class="mcd-m" x="550" y="304">sts.windows.net/&lt;tenant&gt;/</text>
+<rect class="mcd-card" x="538" y="326" width="374" height="78" rx="10"/>
+<rect class="mcd-ti-se" x="550" y="338" width="30" height="30" rx="7"/>
+<use class="mcd-ic-se" href="#mcd-sym-lock" x="556" y="344" width="18" height="18"/>
+<text class="mcd-t" x="590" y="355">Federated IAM role</text>
+<text class="mcd-s" x="590" y="373">sts:AssumeRoleWithWebIdentity, no stored keys</text>
+<text class="mcd-m" x="550" y="394">mcdp-databricks-federated-role</text>
+<text class="mcd-lbl" x="538" y="424">Federation trust</text>
+
+<rect class="mcd-grp" x="526" y="446" width="398" height="302" rx="12"/>
+<rect class="mcd-card" x="538" y="460" width="374" height="78" rx="10"/>
+<rect class="mcd-ti-da" x="550" y="472" width="30" height="30" rx="7"/>
+<use class="mcd-ic-da" href="#mcd-sym-bucket" x="556" y="478" width="18" height="18"/>
+<text class="mcd-t" x="590" y="489">S3 document store</text>
+<text class="mcd-s" x="590" y="507">Versioned · all four public access blocks on</text>
+<text class="mcd-m" x="550" y="528">mcdp-documents-nh01/inbound/</text>
+<rect class="mcd-card" x="538" y="550" width="374" height="78" rx="10"/>
+<rect class="mcd-ti-se" x="550" y="562" width="30" height="30" rx="7"/>
+<use class="mcd-ic-se" href="#mcd-sym-key" x="556" y="568" width="18" height="18"/>
+<text class="mcd-t" x="590" y="579">Customer-managed KMS key</text>
+<text class="mcd-s" x="590" y="597">SSE-KMS default · bucket keys · annual rotation</text>
+<text class="mcd-m" x="550" y="618">alias/mcdp-documents</text>
+<rect class="mcd-card" x="538" y="640" width="374" height="78" rx="10"/>
+<rect class="mcd-ti-se" x="550" y="652" width="30" height="30" rx="7"/>
+<use class="mcd-ic-se" href="#mcd-sym-shield" x="556" y="658" width="18" height="18"/>
+<text class="mcd-t" x="590" y="669">Bucket policy - three explicit denies</text>
+<text class="mcd-s" x="590" y="687">Unencrypted upload · wrong key · plain HTTP</text>
+<text class="mcd-m" x="550" y="708">Deny wins over any IAM allow</text>
+<text class="mcd-lbl" x="538" y="738">Document store</text>
+
+<rect class="mcd-grp" x="526" y="760" width="398" height="268" rx="12"/>
+<rect class="mcd-card" x="538" y="774" width="374" height="230" rx="10"/>
+<path class="mcd-band" d="M538 774h354a10 10 0 0 1 10 10v22H538Z"/>
+<text class="mcd-hd" x="552" y="795">Negative tests - all four denied</text>
+<use class="mcd-ic-se" href="#mcd-sym-check" x="552" y="820" width="18" height="18"/>
+<text class="mcd-s" x="580" y="826">Different managed identity assumes the role</text>
+<text class="mcd-m" x="580" y="845">AccessDenied at STS</text>
+<use class="mcd-ic-se" href="#mcd-sym-check" x="552" y="862" width="18" height="18"/>
+<text class="mcd-s" x="580" y="868">Expired temporary credentials reused</text>
+<text class="mcd-m" x="580" y="887">ExpiredToken</text>
+<use class="mcd-ic-se" href="#mcd-sym-check" x="552" y="904" width="18" height="18"/>
+<text class="mcd-s" x="580" y="910">Read attempted outside the inbound prefix</text>
+<text class="mcd-m" x="580" y="929">AccessDenied at S3</text>
+<use class="mcd-ic-se" href="#mcd-sym-check" x="552" y="946" width="18" height="18"/>
+<text class="mcd-s" x="580" y="952">kms:Decrypt removed, s3:GetObject kept</text>
+<text class="mcd-m" x="580" y="971">AccessDenied - KMS is a separate gate</text>
+<text class="mcd-lbl" x="538" y="1018">Verification</text>
+
+<path class="mcd-tok" d="M140 472 V340" marker-end="url(#mcd-aht)"/>
+<circle class="mcd-num" cx="140" cy="406" r="11"/>
+<text class="mcd-numt" x="140" y="410" text-anchor="middle">1</text>
+<path class="mcd-tok" d="M186 328 V460" marker-end="url(#mcd-aht)"/>
+<circle class="mcd-num" cx="186" cy="406" r="11"/>
+<text class="mcd-numt" x="186" y="410" text-anchor="middle">2</text>
+
+<path class="mcd-tok" d="M422 511 H480 V375 H526" marker-end="url(#mcd-aht)"/>
+<circle class="mcd-num" cx="480" cy="452" r="11"/>
+<text class="mcd-numt" x="480" y="456" text-anchor="middle">3</text>
+<circle class="mcd-num" cx="862" cy="326" r="11"/>
+<text class="mcd-numt" x="862" y="330" text-anchor="middle">4</text>
+
+<path class="mcd-tok" d="M725 404 V460" marker-end="url(#mcd-aht)"/>
+<circle class="mcd-num" cx="725" cy="432" r="11"/>
+<text class="mcd-numt" x="725" y="436" text-anchor="middle">5</text>
+<path class="mcd-arr" d="M725 538 V550" marker-end="url(#mcd-ah)"/>
+<circle class="mcd-num" cx="860" cy="544" r="11"/>
+<text class="mcd-numt" x="860" y="548" text-anchor="middle">6</text>
+
+<path class="mcd-arrd" d="M235 998 V1040 H640 V1004" marker-end="url(#mcd-ah)"/>
+<text class="mcd-al" x="300" y="1034">internal tier reads a secret via its own managed identity</text>
+
+<line class="mcd-rule" x1="20" y1="1112" x2="940" y2="1112"/>
+
+<rect class="mcd-card" x="20" y="1134" width="450" height="176" rx="10"/>
+<path class="mcd-band" d="M20 1134h430a10 10 0 0 1 10 10v22H20Z"/>
+<text class="mcd-hd" x="34" y="1155">Trust policy - what AWS checks</text>
+<text class="mcd-s" x="34" y="1188">Principal.Federated</text>
+<text class="mcd-mk" x="206" y="1188">the OIDC provider ARN</text>
+<text class="mcd-s" x="34" y="1212">Issuer</text>
+<text class="mcd-mk" x="206" y="1212">enforced structurally</text>
+<text class="mcd-s" x="34" y="1236">Condition on :aud</text>
+<text class="mcd-mk" x="206" y="1236">api://&lt;api-app-id&gt;</text>
+<text class="mcd-s" x="34" y="1260">Condition on :sub</text>
+<text class="mcd-mk" x="206" y="1260">managed identity principal</text>
+<text class="mcd-s" x="34" y="1290">There is no :iss condition key - the issuer is pinned by which provider is named.</text>
+
+<rect class="mcd-card" x="490" y="1134" width="450" height="176" rx="10"/>
+<path class="mcd-band" d="M490 1134h430a10 10 0 0 1 10 10v22H490Z"/>
+<text class="mcd-hd" x="504" y="1155">Federated role - what it may do</text>
+<text class="mcd-s" x="504" y="1188">s3:GetObject</text>
+<text class="mcd-mk" x="676" y="1188">inbound/* only</text>
+<text class="mcd-s" x="504" y="1212">s3:ListBucket</text>
+<text class="mcd-mk" x="676" y="1212">s3:prefix condition</text>
+<text class="mcd-s" x="504" y="1236">kms:Decrypt</text>
+<text class="mcd-mk" x="676" y="1236">one key ARN</text>
+<text class="mcd-s" x="504" y="1260">No write, no delete</text>
+<text class="mcd-mk" x="676" y="1260">read path only</text>
+<text class="mcd-s" x="504" y="1290">ListBucket is scoped by condition, not by ARN - the bucket ARN has no prefix.</text>
+
+<text class="mcd-hd" x="24" y="1346">Legend</text>
+<rect class="mcd-ti-id" x="24" y="1360" width="16" height="16" rx="4"/>
+<text class="mcd-s" x="48" y="1372">Identity</text>
+<rect class="mcd-ti-da" x="120" y="1360" width="16" height="16" rx="4"/>
+<text class="mcd-s" x="144" y="1372">Data</text>
+<rect class="mcd-ti-se" x="204" y="1360" width="16" height="16" rx="4"/>
+<text class="mcd-s" x="228" y="1372">Security</text>
+<rect class="mcd-ti-ed" x="300" y="1360" width="16" height="16" rx="4"/>
+<text class="mcd-s" x="324" y="1372">Edge and API</text>
+<rect class="mcd-ti-ou" x="424" y="1360" width="16" height="16" rx="4"/>
+<text class="mcd-s" x="448" y="1372">Outside both clouds</text>
+<path class="mcd-tok" d="M596 1368h30" marker-end="url(#mcd-aht)"/>
+<text class="mcd-s" x="634" y="1372">Token or credential path</text>
+<path class="mcd-arr" d="M784 1368h30" marker-end="url(#mcd-ah)"/>
+<text class="mcd-s" x="822" y="1372">Synchronous</text>
+<path class="mcd-arrd" d="M24 1398h30" marker-end="url(#mcd-ah)"/>
+<text class="mcd-s" x="62" y="1402">Asynchronous or out-of-band</text>
+<text class="mcd-s" x="260" y="1402">Identity is an added category, in the same muted family as the rest.</text>
+
+<text class="mcd-hd" x="24" y="1444">Flow</text>
+<circle class="mcd-num" cx="35" cy="1468" r="11"/>
+<text class="mcd-numt" x="35" y="1472" text-anchor="middle">1</text>
+<text class="mcd-s" x="56" y="1472">The workload asks the local instance metadata endpoint for a token. No credential is sent with the request.</text>
+<circle class="mcd-num" cx="35" cy="1494" r="11"/>
+<text class="mcd-numt" x="35" y="1498" text-anchor="middle">2</text>
+<text class="mcd-s" x="56" y="1498">Entra ID returns a signed JWT whose subject claim is the managed identity's principal ID.</text>
+<circle class="mcd-num" cx="35" cy="1520" r="11"/>
+<text class="mcd-numt" x="35" y="1524" text-anchor="middle">3</text>
+<text class="mcd-s" x="56" y="1524">The token is presented to AWS STS as AssumeRoleWithWebIdentity against the registered OIDC provider.</text>
+<circle class="mcd-num" cx="35" cy="1546" r="11"/>
+<text class="mcd-numt" x="35" y="1550" text-anchor="middle">4</text>
+<text class="mcd-s" x="56" y="1550">The trust policy checks the audience and subject claims, then STS returns short-lived credentials.</text>
+<circle class="mcd-num" cx="35" cy="1572" r="11"/>
+<text class="mcd-numt" x="35" y="1576" text-anchor="middle">5</text>
+<text class="mcd-s" x="56" y="1576">Those credentials read objects under the inbound prefix only; listing is scoped by an s3:prefix condition.</text>
+<circle class="mcd-num" cx="500" cy="1572" r="11"/>
+<text class="mcd-numt" x="500" y="1576" text-anchor="middle">6</text>
+<text class="mcd-s" x="521" y="1576">S3 asks KMS to unwrap the data key - a second, independent grant.</text>
+</svg>
