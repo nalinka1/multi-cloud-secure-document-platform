@@ -1,0 +1,8 @@
+subscription_id    = "00000000-0000-0000-0000-000000000000"
+tenant_id          = "00000000-0000-0000-0000-000000000000"
+federated_audience = "api://00000000-0000-0000-0000-000000000000"
+federated_subject  = "00000000-0000-0000-0000-000000000000"
+oidc_thumbprint    = "0000000000000000000000000000000000000000"
+publisher_email    = "you@example.com"
+bucket_name        = "yourname-documents"
+key_vault_name     = "kv-yourname-dev"
