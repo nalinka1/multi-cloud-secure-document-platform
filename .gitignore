@@ -1,0 +1,28 @@
+
+# Terraform state — contains secrets in plaintext, never commit
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl.bak
+ 
+# Saved plans — can carry sensitive values
+tfplan
+*.tfplan
+ 
+# Variable files with real identifiers
+*.tfvars
+!*.tfvars.example
+*.auto.tfvars
+ 
+# Credentials
+.env
+*.pem
+*.key
+crash.log
+crash.*.log
+ 
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
+ 
